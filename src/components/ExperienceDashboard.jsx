@@ -3,7 +3,7 @@ import { LogOut } from 'lucide-react';
 import authService from '../services/authService';
 import Swal from 'sweetalert2';
 import DashboardNavigation from './DashboardNavigation';
-import ServicesSection from './sections/ServicesSection';
+import ExperienceServicesSection from './sections/ExperienceServicesSection';
 import ReservationsSection from './sections/ReservationsSection';
 import ClientsSection from './sections/ClientsSection';
 import FinancesSection from './sections/FinancesSection';
@@ -66,7 +66,7 @@ const ExperienceDashboard = ({ user, onLogout }) => {
   const renderSection = () => {
     switch (activeSection) {
       case 'servicios':
-        return <ServicesSection userType="tour" />;
+        return <ExperienceServicesSection />;
       case 'reservas':
         return <ReservationsSection userType="tour" />;
       case 'clientes':
@@ -76,7 +76,7 @@ const ExperienceDashboard = ({ user, onLogout }) => {
       case 'estadisticas':
         return <StatisticsSection userType="tour" />;
       default:
-        return <ServicesSection userType="tour" />;
+        return <ExperienceServicesSection />;
     }
   };
 

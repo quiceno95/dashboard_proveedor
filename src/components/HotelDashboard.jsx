@@ -3,16 +3,16 @@ import { LogOut } from 'lucide-react';
 import authService from '../services/authService';
 import Swal from 'sweetalert2';
 import DashboardNavigation from './DashboardNavigation';
-import ServicesSection from './sections/ServicesSection';
+import HotelServicesSection from './sections/HotelServicesSection';
 import ReservationsSection from './sections/ReservationsSection';
 import ClientsSection from './sections/ClientsSection';
 import FinancesSection from './sections/FinancesSection';
 import StatisticsSection from './sections/StatisticsSection';
 
 const HotelDashboard = ({ user, onLogout }) => {
+  const [activeSection, setActiveSection] = useState('servicios');
   const [hotelData, setHotelData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState('servicios');
 
   useEffect(() => {
     const fetchHotelData = async () => {
@@ -66,7 +66,7 @@ const HotelDashboard = ({ user, onLogout }) => {
   const renderSection = () => {
     switch (activeSection) {
       case 'servicios':
-        return <ServicesSection userType="hotel" />;
+        return <HotelServicesSection />;
       case 'reservas':
         return <ReservationsSection userType="hotel" />;
       case 'clientes':
@@ -76,7 +76,7 @@ const HotelDashboard = ({ user, onLogout }) => {
       case 'estadisticas':
         return <StatisticsSection userType="hotel" />;
       default:
-        return <ServicesSection userType="hotel" />;
+        return <HotelServicesSection />;
     }
   };
 

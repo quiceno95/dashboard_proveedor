@@ -3,7 +3,7 @@ import { LogOut } from 'lucide-react';
 import authService from '../services/authService';
 import Swal from 'sweetalert2';
 import DashboardNavigation from './DashboardNavigation';
-import ServicesSection from './sections/ServicesSection';
+import RestaurantServicesSection from './sections/RestaurantServicesSection';
 import ReservationsSection from './sections/ReservationsSection';
 import ClientsSection from './sections/ClientsSection';
 import FinancesSection from './sections/FinancesSection';
@@ -66,7 +66,7 @@ const RestaurantDashboard = ({ user, onLogout }) => {
   const renderSection = () => {
     switch (activeSection) {
       case 'servicios':
-        return <ServicesSection userType="restaurante" />;
+        return <RestaurantServicesSection />;
       case 'reservas':
         return <ReservationsSection userType="restaurante" />;
       case 'clientes':
@@ -76,7 +76,7 @@ const RestaurantDashboard = ({ user, onLogout }) => {
       case 'estadisticas':
         return <StatisticsSection userType="restaurante" />;
       default:
-        return <ServicesSection userType="restaurante" />;
+        return <RestaurantServicesSection />;
     }
   };
 

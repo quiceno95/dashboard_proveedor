@@ -27,10 +27,12 @@ class AuthService {
       const expirationDate = new Date(decodedToken.exp * 1000);
       
       // Guardar el token en cookies con la fecha de expiración
+      // En desarrollo (HTTP) no usar secure, en producción (HTTPS) sí
+      const isProduction = window.location.protocol === 'https:';
       Cookies.set('access_token', access_token, { 
         expires: expirationDate,
-        secure: true,
-        sameSite: 'strict'
+        secure: isProduction,
+        sameSite: isProduction ? 'strict' : 'lax'
       });
       
       // Guardar información del usuario
