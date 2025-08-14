@@ -21,6 +21,7 @@ import Swal from 'sweetalert2';
 import CreateServiceModal from '../modals/CreateServiceModal';
 import EditServiceModal from '../modals/EditServiceModal';
 import ViewServiceModal from '../modals/ViewServiceModal';
+import PhotoUploadModal from '../modals/PhotoUploadModal';
 
 const HotelServicesSection = () => {
   const [services, setServices] = useState([]);
@@ -34,6 +35,8 @@ const HotelServicesSection = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [photoServiceId, setPhotoServiceId] = useState(null);
 
   // Obtener datos del usuario actual
   useEffect(() => {
@@ -135,24 +138,10 @@ const HotelServicesSection = () => {
     }
   };
 
-  // Ver fotos del servicio
-  const handleViewPhotos = async (serviceId) => {
-    try {
-      const photos = await servicesService.obtenerFotosServicio(serviceId);
-      Swal.fire({
-        title: 'Fotos del Servicio',
-        text: `Se encontraron ${photos.length || 0} fotos`,
-        icon: 'info',
-        confirmButtonColor: '#263DBF'
-      });
-    } catch (error) {
-      Swal.fire({
-        title: 'Error',
-        text: 'No se pudieron cargar las fotos del servicio',
-        icon: 'error',
-        confirmButtonColor: '#263DBF'
-      });
-    }
+  // Ver / agregar fotos del servicio
+  const handleViewPhotos = (serviceId) => {
+    setPhotoServiceId(serviceId);
+    setShowPhotoModal(true);
   };
 
   // Eliminar servicio
@@ -483,6 +472,14 @@ const HotelServicesSection = () => {
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
         service={selectedService}
+      />
+
+      {/* Modal de fotos del servicio */}
+      <PhotoUploadModal
+        isOpen={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        serviceId={photoServiceId}
+        onCreated={loadServices}
       />
     </div>
   );

@@ -22,6 +22,7 @@ import Swal from 'sweetalert2';
 import CreateExperienceServiceModal from '../modals/CreateExperienceServiceModal';
 import EditExperienceServiceModal from '../modals/EditExperienceServiceModal';
 import ViewExperienceServiceModal from '../modals/ViewExperienceServiceModal';
+import PhotoUploadModal from '../modals/PhotoUploadModal';
 
 const ExperienceServicesSection = () => {
   const [services, setServices] = useState([]);
@@ -36,6 +37,8 @@ const ExperienceServicesSection = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [photoServiceId, setPhotoServiceId] = useState(null);
 
   // Obtener usuario actual del JWT
   useEffect(() => {
@@ -182,13 +185,8 @@ const ExperienceServicesSection = () => {
 
   // Manejar ver fotos
   const handleViewPhotos = (serviceId) => {
-    // TODO: Implementar modal de fotos
-    Swal.fire({
-      title: 'Próximamente',
-      text: 'La funcionalidad de fotos estará disponible pronto',
-      icon: 'info',
-      confirmButtonColor: '#263DBF'
-    });
+    setPhotoServiceId(serviceId);
+    setShowPhotoModal(true);
   };
 
   // Formatear precio
@@ -488,6 +486,14 @@ const ExperienceServicesSection = () => {
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
         service={selectedService}
+      />
+
+      {/* Modal de fotos de experiencia */}
+      <PhotoUploadModal
+        isOpen={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        serviceId={photoServiceId}
+        onCreated={loadServices}
       />
     </div>
   );
