@@ -22,6 +22,7 @@ import Swal from 'sweetalert2';
 import CreateRestaurantServiceModal from '../modals/CreateRestaurantServiceModal';
 import EditRestaurantServiceModal from '../modals/EditRestaurantServiceModal';
 import ViewRestaurantServiceModal from '../modals/ViewRestaurantServiceModal';
+import PhotoUploadModal from '../modals/PhotoUploadModal';
 
 const RestaurantServicesSection = () => {
   const [services, setServices] = useState([]);
@@ -35,7 +36,9 @@ const RestaurantServicesSection = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [photoServiceId, setPhotoServiceId] = useState(null);
 
   // Obtener datos del usuario actual
   useEffect(() => {
@@ -176,15 +179,10 @@ const RestaurantServicesSection = () => {
     }
   };
 
-  // Ver fotos del servicio
+  // Ver / agregar fotos del servicio
   const handleViewPhotos = (serviceId) => {
-    // TODO: Implementar modal de fotos
-    Swal.fire({
-      title: 'Próximamente',
-      text: 'La funcionalidad de fotos estará disponible pronto',
-      icon: 'info',
-      confirmButtonColor: '#263DBF'
-    });
+    setPhotoServiceId(serviceId);
+    setShowPhotoModal(true);
   };
 
   // Formatear precio
@@ -465,6 +463,14 @@ const RestaurantServicesSection = () => {
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
         service={selectedService}
+      />
+
+      {/* Modal de fotos del servicio */}
+      <PhotoUploadModal
+        isOpen={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        serviceId={photoServiceId}
+        onCreated={loadServices}
       />
     </div>
   );

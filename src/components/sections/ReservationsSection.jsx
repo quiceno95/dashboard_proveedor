@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
   Clock, 
@@ -13,163 +13,124 @@ import {
   Edit,
   Filter,
   Search,
-  Plus
+  Plus,
+  Loader
 } from 'lucide-react';
+import reservationsService from '../../services/reservationsService';
+import jwtDecode from 'jwt-decode';
+import Cookies from 'js-cookie';
 
 const ReservationsSection = ({ userType }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
-  // Datos de ejemplo según el tipo de usuario
-  const getReservationsData = () => {
-    switch (userType) {
-      case 'hotel':
-        return [
-          {
-            id: 1,
-            guestName: 'Carlos Rodríguez',
-            email: 'carlos@email.com',
-            phone: '+57 300 123 4567',
-            service: 'Suite Ejecutiva',
-            checkIn: '2024-01-15',
-            checkOut: '2024-01-18',
-            guests: 2,
-            status: 'confirmed',
-            totalAmount: 900000,
-            specialRequests: 'Cama extra para niño'
-          },
-          {
-            id: 2,
-            guestName: 'María González',
-            email: 'maria@email.com',
-            phone: '+57 301 987 6543',
-            service: 'Habitación Estándar',
-            checkIn: '2024-01-16',
-            checkOut: '2024-01-17',
-            guests: 1,
-            status: 'pending',
-            totalAmount: 150000,
-            specialRequests: 'Habitación no fumadores'
-          },
-          {
-            id: 3,
-            guestName: 'Juan Pérez',
-            email: 'juan@email.com',
-            phone: '+57 302 456 7890',
-            service: 'Suite Ejecutiva',
-            checkIn: '2024-01-14',
-            checkOut: '2024-01-16',
-            guests: 3,
-            status: 'cancelled',
-            totalAmount: 600000,
-            specialRequests: 'Vista al mar'
-          }
-        ];
-      
-      case 'restaurante':
-        return [
-          {
-            id: 1,
-            guestName: 'Ana Martínez',
-            email: 'ana@email.com',
-            phone: '+57 300 111 2222',
-            service: 'Cena Romántica',
-            checkIn: '2024-01-15',
-            checkOut: '2024-01-15',
-            guests: 2,
-            status: 'confirmed',
-            totalAmount: 120000,
-            specialRequests: 'Mesa junto a la ventana',
-            time: '19:30'
-          },
-          {
-            id: 2,
-            guestName: 'Roberto Silva',
-            email: 'roberto@email.com',
-            phone: '+57 301 333 4444',
-            service: 'Menú Ejecutivo',
-            checkIn: '2024-01-16',
-            checkOut: '2024-01-16',
-            guests: 4,
-            status: 'pending',
-            totalAmount: 140000,
-            specialRequests: 'Sin gluten',
-            time: '13:00'
-          },
-          {
-            id: 3,
-            guestName: 'Laura Jiménez',
-            email: 'laura@email.com',
-            phone: '+57 302 555 6666',
-            service: 'Buffet Dominical',
-            checkIn: '2024-01-14',
-            checkOut: '2024-01-14',
-            guests: 6,
-            status: 'completed',
-            totalAmount: 270000,
-            specialRequests: 'Mesa para niños',
-            time: '12:00'
-          }
-        ];
-      
-      case 'tour':
-        return [
-          {
-            id: 1,
-            guestName: 'Diego Morales',
-            email: 'diego@email.com',
-            phone: '+57 300 777 8888',
-            service: 'City Tour Histórico',
-            checkIn: '2024-01-15',
-            checkOut: '2024-01-15',
-            guests: 5,
-            status: 'confirmed',
-            totalAmount: 300000,
-            specialRequests: 'Guía en inglés',
-            time: '09:00'
-          },
-          {
-            id: 2,
-            guestName: 'Carmen López',
-            email: 'carmen@email.com',
-            phone: '+57 301 999 0000',
-            service: 'Aventura en la Montaña',
-            checkIn: '2024-01-16',
-            checkOut: '2024-01-16',
-            guests: 3,
-            status: 'pending',
-            totalAmount: 360000,
-            specialRequests: 'Nivel principiante',
-            time: '07:00'
-          },
-          {
-            id: 3,
-            guestName: 'Fernando Castro',
-            email: 'fernando@email.com',
-            phone: '+57 302 111 2222',
-            service: 'Tour Gastronómico',
-            checkIn: '2024-01-14',
-            checkOut: '2024-01-14',
-            guests: 8,
-            status: 'completed',
-            totalAmount: 640000,
-            specialRequests: 'Vegetariano',
-            time: '15:00'
-          }
-        ];
-      
-      default:
-        return [];
+  // Obtener id del proveedor del token
+  useEffect(() => {
+    const token = Cookies.get('access_token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setCurrentUserId(decoded?.id || decoded?.userId || decoded?.sub || null);
+      } catch (e) {
+        console.error('Error al decodificar token:', e);
+      }
+    }
+  }, []);
+
+  // Mapear estados del backend a los usados en la UI
+  const mapStatus = (estadoRaw) => {
+    const e = (estadoRaw || '').toString().toLowerCase();
+    if (e === 'pendiente') return 'pending';
+    if (e === 'confirmada' || e === 'confirmado') return 'confirmed';
+    if (e === 'cancelada' || e === 'cancelado') return 'cancelled';
+    if (e === 'completada' || e === 'completado') return 'completed';
+    return e || 'pending';
+  };
+
+  // Normalizar respuesta API a estructura de UI
+  const normalizeReservations = (data) => {
+    const items = Array.isArray(data) ? data : (data?.reservas || data?.data || []);
+    return items.map((r, idx) => {
+      const unitPrice = r.precio ? parseFloat(String(r.precio)) : (r.total || r.total_pago ? Number(r.total || r.total_pago) : 0);
+      const qty = r.cantidad || r.personas || r.huespedes || 1;
+      return {
+        id: r.id_reserva ?? r.id ?? idx,
+        // Campos del cliente (si existen)
+        guestName: r.cliente_nombre || r.nombre_cliente || 'Cliente',
+        email: r.cliente_email || '',
+        phone: r.cliente_telefono || '',
+        // Campos del servicio
+        service: r.nombre_servicio || r.servicio_nombre || 'Servicio',
+        description: r.descripcion || '',
+        serviceType: r.tipo_servicio || '',
+        city: r.ciudad || '',
+        active: typeof r.activo === 'boolean' ? r.activo : undefined,
+        // Fechas y cantidad
+        createdAt: r.fecha_creacion || null,
+        checkIn: r.fecha_inicio || r.check_in || null,
+        checkOut: r.fecha_fin || r.check_out || null,
+        guests: qty,
+        // Estado
+        status: mapStatus(r.estado || r.status),
+        // Precios
+        unitPrice: isNaN(unitPrice) ? 0 : unitPrice,
+        totalAmount: (isNaN(unitPrice) ? 0 : unitPrice) * qty,
+        // Observaciones
+        specialRequests: r.observaciones || '',
+        // otros
+        time: r.hora || null,
+      };
+    });
+  };
+
+  // Cargar reservas del proveedor
+  useEffect(() => {
+    const fetchReservations = async () => {
+      if (!currentUserId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const resp = await reservationsService.listarPorProveedor(currentUserId);
+        const normalized = normalizeReservations(resp);
+        setReservations(normalized);
+      } catch (err) {
+        console.error('Error al cargar reservas:', err);
+        setError('No se pudieron cargar las reservas. Intenta nuevamente.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReservations();
+  }, [currentUserId]);
+  const onlyDate = (value) => {
+    if (!value) return '';
+    try {
+      // Si viene en ISO u otro formato con tiempo, normalizamos a YYYY-MM-DD
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+      // Si ya viene como YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+      return '';
+    } catch {
+      return '';
     }
   };
 
-  const reservations = getReservationsData();
-  const filteredReservations = reservations.filter(reservation => {
-    const matchesSearch = reservation.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         reservation.service.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredReservations = reservations.filter((reservation) => {
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      reservation.guestName.toLowerCase().includes(q) ||
+      reservation.service.toLowerCase().includes(q) ||
+      (reservation.description || '').toLowerCase().includes(q) ||
+      (reservation.city || '').toLowerCase().includes(q);
     const matchesFilter = filterStatus === 'all' || reservation.status === filterStatus;
-    const matchesDate = !selectedDate || reservation.checkIn === selectedDate;
+    const resDate = onlyDate(reservation.checkIn);
+    const matchesDate = !selectedDate || resDate === selectedDate;
     return matchesSearch && matchesFilter && matchesDate;
   });
 
@@ -229,6 +190,27 @@ const ReservationsSection = ({ userType }) => {
         return 'Fecha';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <Loader className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-gray-600">Cargando reservas...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Error al cargar reservas</h3>
+        <p className="text-gray-600 mb-4">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -293,7 +275,7 @@ const ReservationsSection = ({ userType }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Reservas</p>
-              <p className="text-2xl font-bold text-gray-900">{reservations.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{filteredReservations.length}</p>
             </div>
             <Calendar className="h-8 w-8 text-primary" />
           </div>
@@ -304,7 +286,7 @@ const ReservationsSection = ({ userType }) => {
             <div>
               <p className="text-sm font-medium text-gray-600">Confirmadas</p>
               <p className="text-2xl font-bold text-green-600">
-                {reservations.filter(r => r.status === 'confirmed').length}
+                {filteredReservations.filter(r => r.status === 'confirmed').length}
               </p>
             </div>
             <CheckCircle className="h-8 w-8 text-green-600" />
@@ -316,7 +298,7 @@ const ReservationsSection = ({ userType }) => {
             <div>
               <p className="text-sm font-medium text-gray-600">Pendientes</p>
               <p className="text-2xl font-bold text-yellow-600">
-                {reservations.filter(r => r.status === 'pending').length}
+                {filteredReservations.filter(r => r.status === 'pending').length}
               </p>
             </div>
             <AlertCircle className="h-8 w-8 text-yellow-600" />
@@ -328,7 +310,7 @@ const ReservationsSection = ({ userType }) => {
             <div>
               <p className="text-sm font-medium text-gray-600">Ingresos</p>
               <p className="text-2xl font-bold text-primary">
-                ${reservations.reduce((sum, r) => sum + r.totalAmount, 0).toLocaleString()}
+                ${filteredReservations.reduce((sum, r) => sum + r.totalAmount, 0).toLocaleString()}
               </p>
             </div>
             <MapPin className="h-8 w-8 text-primary" />
@@ -338,72 +320,74 @@ const ReservationsSection = ({ userType }) => {
 
       {/* Lista de reservas */}
       <div className="space-y-4">
-        {filteredReservations.map((reservation) => (
-          <div key={reservation.id} className="card hover:shadow-lg transition-shadow duration-200">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              {/* Información principal */}
-              <div className="flex-1">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-bold text-gray-900">{reservation.guestName}</h3>
-                    <p className="text-sm text-gray-600">{reservation.service}</p>
+        {filteredReservations.map((r) => (
+          <div key={r.id} className="card hover:shadow-lg transition-shadow duration-200">
+            <div className="flex flex-col gap-4">
+              {/* Header de la card */}
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900">{r.service}</h3>
+                    {r.serviceType && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+                        {r.serviceType}
+                      </span>
+                    )}
+                    {r.city && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-gray-50 text-gray-700 border border-gray-200">
+                        {r.city}
+                      </span>
+                    )}
                   </div>
-                  {getStatusBadge(reservation.status)}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{getDateLabel()}: {formatDate(reservation.checkIn)}</span>
-                  </div>
-                  
-                  {reservation.time && (
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4" />
-                      <span>{reservation.time}</span>
-                    </div>
+                  {r.description && (
+                    <p className="text-sm text-gray-600 line-clamp-2">{r.description}</p>
                   )}
-                  
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-4 w-4" />
-                    <span>{reservation.guests} {reservation.guests === 1 ? 'persona' : 'personas'}</span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4" />
-                    <span>{reservation.phone}</span>
-                  </div>
                 </div>
-
-                {reservation.specialRequests && (
-                  <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">
-                      <strong>Solicitudes especiales:</strong> {reservation.specialRequests}
-                    </p>
-                  </div>
-                )}
+                <div className="shrink-0">{getStatusBadge(r.status)}</div>
               </div>
 
-              {/* Acciones y precio */}
-              <div className="flex flex-col items-end space-y-3">
-                <div className="text-right">
-                  <p className="text-lg font-bold text-gray-900">
-                    ${reservation.totalAmount.toLocaleString()}
+              {/* Contenido de la card */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {getDateLabel()}: {r.checkIn ? formatDate(r.checkIn) : '—'}
+                    {r.checkOut && ` • Fin: ${formatDate(r.checkOut)}`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span>{r.guests} {r.guests === 1 ? 'persona' : 'personas'}</span>
+                </div>
+                <div className="text-right md:text-left">
+                  <p className="text-base font-semibold text-gray-900">
+                    ${r.totalAmount.toLocaleString()}
                   </p>
-                  <p className="text-sm text-gray-600">Total</p>
+                  <p className="text-xs text-gray-500">
+                    {r.unitPrice ? `(${r.guests} × $${r.unitPrice.toLocaleString()})` : 'Total'}
+                  </p>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors duration-200">
-                    <Eye className="h-4 w-4" />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-green-600 transition-colors duration-200">
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-primary transition-colors duration-200">
-                    <Mail className="h-4 w-4" />
-                  </button>
+              </div>
+
+              {r.specialRequests && (
+                <div className="mt-1 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <p className="text-sm text-gray-600">
+                    <strong className="text-gray-700">Observaciones:</strong> {r.specialRequests}
+                  </p>
                 </div>
+              )}
+
+              {/* Acciones opcionales */}
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors duration-200">
+                  <Eye className="h-4 w-4" />
+                </button>
+                <button className="p-2 text-gray-400 hover:text-green-600 transition-colors duration-200">
+                  <Edit className="h-4 w-4" />
+                </button>
+                <button className="p-2 text-gray-400 hover:text-primary transition-colors duration-200">
+                  <Mail className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
